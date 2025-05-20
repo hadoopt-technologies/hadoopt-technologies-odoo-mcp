@@ -5,6 +5,7 @@ Provides visualization and reporting capabilities for Odoo data.
 """
 import json
 from typing import Dict, List, Any, Optional, Union
+from mcp.server.fastmcp import Context, FastMCP
 
 
 class DataVisualization:
@@ -233,7 +234,7 @@ class DataVisualization:
                 continue
                 
             # For many2one relations, use the name
-            if field_type == 'many2one' and isinstance(value, list) and len(value) == 2:
+            if field_type == 'many2one' and isinstance(value, tuple) and len(value) == 2:
                 value = value[1]  # Use display name
             
             # Convert value to string for dict key
@@ -311,19 +312,23 @@ class DataVisualization:
         return bins
 
 
-def register_visualization_tools(mcp_server):
+def register_visualization_tools(mcp: FastMCP, app_context):
     """
     Register visualization-related tools to the MCP server.
     
     Args:
-        mcp_server: The FastMCP server instance to register tools with
+        mcp: The FastMCP server instance to register tools with
+        app_context: Application context containing instance manager
     """
-    @mcp_server.tool(description="Generate visualization for Odoo data")
+    instance_manager = app_context.instance_manager
+    
+    @mcp.tool(description="Generate visualization for Odoo data")
     def generate_data_visualization(
-        ctx,
+        ctx: Context,
         model: str,
         visualization_type: str = 'bar',
-        fields: Optional[str] = None
+        fields: Optional[str] = None,
+        instance_name: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Generate a visualization for a given Odoo model.
@@ -333,31 +338,47 @@ def register_visualization_tools(mcp_server):
             model: Odoo model to visualize
             visualization_type: Type of visualization (bar, pie, line, scatter)
             fields: Comma-separated list of fields to include
+            instance_name: Optional name of the instance to use (default: active instance)
             
         Returns:
             Visualization data or error information
         """
-        odoo = ctx.request_context.lifespan_context.odoo
+        instance_name = instance_name or instance_manager.active_instance
+        odoo_client = instance_manager.get_client(instance_name)
+        
+        if not odoo_client:
+            return {
+                'success': False,
+                'error': f"Instance '{instance_name}' not found.",
+                'available_instances': instance_manager.get_available_instances()
+            }
         
         try:
-            visualizer = DataVisualization(odoo)
-            return visualizer.generate_visualization(
+            visualizer = DataVisualization(odoo_client)
+            result = visualizer.generate_visualization(
                 model, 
                 visualization_type, 
                 fields
             )
+            
+            # Add instance information to result
+            result['instance'] = instance_name
+            
+            return result
         except Exception as e:
             return {
                 'success': False,
-                'error': str(e)
+                'error': str(e),
+                'instance': instance_name
             }
 
-    @mcp_server.tool(description="Analyze data distribution")
+    @mcp.tool(description="Analyze data distribution")
     def analyze_data_distribution(
-        ctx,
+        ctx: Context,
         model: str,
         field: str,
-        distribution_type: str = 'frequency'
+        distribution_type: str = 'frequency',
+        instance_name: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Analyze distribution of a specific field in an Odoo model.
@@ -367,21 +388,36 @@ def register_visualization_tools(mcp_server):
             model: Odoo model to analyze
             field: Field to analyze distribution
             distribution_type: Type of distribution analysis (frequency, histogram)
+            instance_name: Optional name of the instance to use (default: active instance)
             
         Returns:
             Distribution analysis results
         """
-        odoo = ctx.request_context.lifespan_context.odoo
+        instance_name = instance_name or instance_manager.active_instance
+        odoo_client = instance_manager.get_client(instance_name)
+        
+        if not odoo_client:
+            return {
+                'success': False,
+                'error': f"Instance '{instance_name}' not found.",
+                'available_instances': instance_manager.get_available_instances()
+            }
         
         try:
-            visualizer = DataVisualization(odoo)
-            return visualizer.analyze_distribution(
+            visualizer = DataVisualization(odoo_client)
+            result = visualizer.analyze_distribution(
                 model, 
                 field, 
                 distribution_type
             )
+            
+            # Add instance information to result
+            result['instance'] = instance_name
+            
+            return result
         except Exception as e:
             return {
                 'success': False,
-                'error': str(e)
+                'error': str(e),
+                'instance': instance_name
             }

@@ -7,7 +7,7 @@ import statistics
 import traceback
 from typing import Any, Dict, List, Optional, Union, Tuple
 
-from mcp.server.fastmcp import Context
+from mcp.server.fastmcp import Context, FastMCP
 from pydantic import BaseModel, Field
 
 
@@ -71,8 +71,9 @@ def _format_float(value: float) -> Union[float, str]:
         return round(value, 2)
 
 
-def register_analysis_tools(mcp):
+def register_analysis_tools(mcp: FastMCP, app_context):
     """Register analysis tools with the MCP server"""
+    instance_manager = app_context.instance_manager
     
     @mcp.tool(description="Analyze data from any Odoo model")
     def analyze_model_data(
@@ -83,7 +84,8 @@ def register_analysis_tools(mcp):
         group_by: List[str] = None,
         measures: List[str] = None,
         time_range: Dict = None,
-        analysis_type: str = "summary"
+        analysis_type: str = "summary",
+        instance_name: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Generic analysis tool for any Odoo model
@@ -96,9 +98,18 @@ def register_analysis_tools(mcp):
             measures: Numeric fields to calculate statistics on
             time_range: Dict with 'field', 'start' and 'end' for time-based analysis
             analysis_type: Type of analysis ('summary', 'trend', 'distribution')
+            instance_name: Optional name of the instance to use (default: active instance)
         """
-        odoo = ctx.request_context.lifespan_context.odoo
-        utils = ctx.request_context.lifespan_context.utils
+        instance_name = instance_name or instance_manager.active_instance
+        odoo = instance_manager.get_client(instance_name)
+        utils = instance_manager.get_utils(instance_name)
+        
+        if not odoo:
+            return {
+                "success": False,
+                "error": f"Instance '{instance_name}' not found.",
+                "available_instances": instance_manager.get_available_instances()
+            }
         
         try:
             domain = domain or []
@@ -147,7 +158,11 @@ def register_analysis_tools(mcp):
             records = odoo.search_read(model, domain, fields=list(fetch_fields) if fetch_fields else None)
             
             if not records:
-                return {"success": True, "result": {"message": "No records found", "count": 0}}
+                return {
+                    "success": True, 
+                    "result": {"message": "No records found", "count": 0},
+                    "instance": instance_name
+                }
             
             # Basic stats for all records
             result = {"count": len(records)}
@@ -461,9 +476,18 @@ def register_analysis_tools(mcp):
                 # Skip model info if we can't get it
                 pass
             
-            return {"success": True, "result": result}
+            return {
+                "success": True, 
+                "result": result, 
+                "instance": instance_name
+            }
         except Exception as e:
-            return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
+            return {
+                "success": False, 
+                "error": str(e), 
+                "traceback": traceback.format_exc(),
+                "instance": instance_name
+            }
     
     @mcp.tool(description="Analyze sales data")
     def analyze_sales(
@@ -473,7 +497,8 @@ def register_analysis_tools(mcp):
         salesperson_id: Optional[int] = None,
         metrics: List[str] = None,
         group_by: List[str] = None,
-        analysis_type: str = "summary"
+        analysis_type: str = "summary",
+        instance_name: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Specialized analysis tool for sales data
@@ -485,6 +510,7 @@ def register_analysis_tools(mcp):
             metrics: Sales metrics to analyze (e.g., 'amount_total', 'amount_untaxed')
             group_by: Fields to group sales by (e.g., 'partner_id', 'user_id')
             analysis_type: Type of analysis ('summary', 'trend', 'distribution')
+            instance_name: Optional name of the instance to use (default: active instance)
         """
         # Default metrics if none provided
         metrics = metrics or ["amount_total", "amount_untaxed", "amount_tax"]
@@ -517,5 +543,6 @@ def register_analysis_tools(mcp):
             group_by=group_by,
             measures=metrics,
             time_range=time_range,
-            analysis_type=analysis_type
+            analysis_type=analysis_type,
+            instance_name=instance_name
         )

@@ -14,7 +14,7 @@ Odoo MCP is a bridge between Claude AI and Odoo ERP systems, allowing for intell
 - **Intelligent Model Discovery**: Enhanced model matching with better similarity metrics
 - **Relationship Mapping**: New tools to discover and visualize relationships between models
 - **Performance Enhancements**: Parallel processing capabilities and intelligent caching
- 
+- **Multi-Instance Support**: Connect to multiple Odoo instances simultaneously and switch between them seamlessly
 
 ## Features
 
@@ -26,6 +26,7 @@ Odoo MCP is a bridge between Claude AI and Odoo ERP systems, allowing for intell
 - **Record Management**: Enhanced CRUD operations with validation and intelligent error handling
 - **Batch Processing**: Efficient handling of large datasets with automatic batching and parallel processing
 - **Performance Monitoring**: Built-in metrics tracking for identifying and resolving performance bottlenecks
+- **Multi-Instance Management**: Manage connections to multiple Odoo instances with automatic reconnection and connection validation
 
 ### Model Discovery and Exploration
 
@@ -44,6 +45,7 @@ Odoo MCP is a bridge between Claude AI and Odoo ERP systems, allowing for intell
 - **Data Validation**: Field validation against Odoo constraints to ensure data integrity
 - **Record Access Control**: Verify user access rights for specific records and models
 - **Archive Management**: Tools to handle archived records with enhanced visibility control
+- **Cross-Instance Operations**: Query and manipulate data across multiple Odoo instances
 
 ### Analytics and Data Visualization
 
@@ -57,6 +59,7 @@ Odoo MCP is a bridge between Claude AI and Odoo ERP systems, allowing for intell
 - **Interactive Charts**: Generate bar, line, pie, scatter, and time series charts from Odoo data
 - **Chart Customization**: Customize charts with titles, colors, and limits
 - **Data Distribution Analysis**: Analyze frequency distributions and histograms of any field
+- **Cross-Instance Analytics**: Compare metrics across different Odoo instances
 
 ### System Utilities and Optimization
 
@@ -67,6 +70,7 @@ Odoo MCP is a bridge between Claude AI and Odoo ERP systems, allowing for intell
 - **Startup Tools**: Streamlined server initialization with optimized settings
 - **Performance Tuning**: Tools to monitor and improve system performance
 - **Parallel Processing**: Multi-threaded operations for improved performance
+- **Instance Context Management**: Temporarily switch between instances for specific operations
 
 ## Installation
 
@@ -101,6 +105,20 @@ The MCP can be configured through various methods:
      "cache_enabled": true,
      "cache_ttl": 300
    }
+   ```
+
+3. **Multi-Instance Configuration**:
+   For multiple Odoo instances, create separate configuration files named after each instance:
+   - `config/production.json`
+   - `config/testing.json`
+   - `config/development.json`
+
+   Or use environment variables with instance prefixes:
+   ```bash
+   export PRODUCTION_ODOO_URL=https://production.odoo.com
+   export PRODUCTION_ODOO_DB=prod_db
+   export TESTING_ODOO_URL=https://test.odoo.com
+   export TESTING_ODOO_DB=test_db
    ```
 
 ## Usage Examples
@@ -149,6 +167,28 @@ Update the status of all draft orders to "approved"
 #### Parallel Processing
 ```
 Process and validate all incoming supplier invoices using parallel workers
+```
+
+### Multi-Instance Operations
+
+#### List Available Instances
+```
+List all available Odoo instances
+```
+
+#### Switch Between Instances
+```
+Switch to the production instance
+```
+
+#### Cross-Instance Operations
+```
+Compare inventory levels between production and testing instances
+```
+
+#### Instance-Specific Operations
+```
+Find all customers in the production instance and create corresponding records in the testing instance
 ```
 
 ### Data Analysis
@@ -206,6 +246,8 @@ The MCP exposes several resources for direct access:
 - `odoo://discover/{description}` - Discover models by description
 - `odoo://model/{model_name}/fields` - Get detailed field information
 - `odoo://chart/{model}/{measure}/{group_by}` - Generate a chart for a model
+- `odoo://instances` - List all available instances
+- `odoo://instance/{instance_name}` - Get information about a specific instance
 
 ## Batch Processing Capabilities
 
@@ -218,6 +260,7 @@ The batch processor supports:
 - **Progress Tracking**: Monitor progress of long-running operations
 - **Automatic Retries**: Retry failed operations with exponential backoff
 - **File Export**: Export large datasets to CSV, JSON, or XLSX formats
+- **Cross-Instance Processing**: Batch operations across multiple instances
 
 ## Best Practices
 
@@ -229,6 +272,8 @@ The batch processor supports:
 6. **Check for Duplicates**: When creating master data, always enable duplicate detection
 7. **Enable Multi-Company Filtering**: For multi-company environments, always specify company_id
 8. **Use Parallel Processing**: For CPU-intensive operations, utilize parallel processing
+9. **Manage Instance Connections**: For multi-instance setups, be explicit about which instance to use
+10. **Use Instance Context**: For temporary instance switching, use the instance context manager
 
 ## Troubleshooting
 
@@ -256,6 +301,12 @@ Common issues and their solutions:
    - Optimize caching settings
    - Utilize parallel processing for CPU-intensive operations
 
+5. **Multi-Instance Issues**:
+   - Verify instance configurations
+   - Check instance connection status
+   - Ensure proper instance switching
+   - Review instance context management
+
 ## Setup Guide
 
 ### 1. Configuration
@@ -272,6 +323,21 @@ The system is pre-configured with defaults in the `config.json` file. You can mo
   "timeout": 30,
   "cache_enabled": true,
   "cache_ttl": 300
+}
+```
+
+For multi-instance setups, create additional configuration files in the `config` directory:
+
+```json
+{
+  "url": "https://production.odoo.com",
+  "db": "prod_db",
+  "username": "admin",
+  "password": "secure_password",
+  "verify_ssl": true,
+  "timeout": 60,
+  "cache_enabled": true,
+  "cache_ttl": 600
 }
 ```
 
@@ -347,6 +413,16 @@ After starting the server, you should see log output confirming successful conne
 5. **Sales Pipeline Optimization**:
    ```
    Analyze conversion rates at each pipeline stage and identify bottlenecks with statistical analysis
+   ```
+
+6. **Cross-Instance Data Migration**:
+   ```
+   Copy all product templates from the development instance to the production instance, preserving relationships
+   ```
+
+7. **Instance Comparison**:
+   ```
+   Compare configuration settings between test and production instances to identify discrepancies
    ```
 
 ## License

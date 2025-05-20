@@ -2,8 +2,6 @@
 Flexible Odoo XML-RPC client for MCP integration
 """
 
-import json
-import os
 import re
 import socket
 import urllib.parse
@@ -518,75 +516,38 @@ class OdooConnect(xmlrpc.client.Transport):
         raise xmlrpc.client.ProtocolError(host + handler, 310, "Too many redirects", {})
 
 
-def load_config() -> Dict:
+# Client access through instance manager
+def get_odoo_client(instance_name: str = "default") -> OdooClient:
     """
-    Load Odoo configuration from environment variables or config file
-
-    Returns:
-        dict: Configuration dictionary with url, db, username, password
-    """
-    # Try environment variables first
-    if all(
-        var in os.environ
-        for var in ["ODOO_URL", "ODOO_DB", "ODOO_USERNAME", "ODOO_PASSWORD"]
-    ):
-        return {
-            "url": os.environ["ODOO_URL"],
-            "db": os.environ["ODOO_DB"],
-            "username": os.environ["ODOO_USERNAME"],
-            "password": os.environ["ODOO_PASSWORD"],
-            "timeout": int(os.environ.get("ODOO_TIMEOUT", "30")),
-            "verify_ssl": os.environ.get("ODOO_VERIFY_SSL", "1").lower() in ["1", "true", "yes"],
-            "cache_enabled": os.environ.get("ODOO_CACHE_ENABLED", "1").lower() in ["1", "true", "yes"],
-            "cache_ttl": int(os.environ.get("ODOO_CACHE_TTL", "300")),
-        }
-
-    # Define config file paths to check
-    config_paths = [
-        "config.json",
-        "hadoopt_odoo_mcp/config.json",
-        os.path.expanduser("~/config.json"),
-    ]
-
-    # Try to load from file
-    for path in config_paths:
-        if os.path.exists(path):
-            with open(path, "r") as f:
-                config = json.load(f)
-                # Add defaults for optional settings
-                if "timeout" not in config:
-                    config["timeout"] = 30
-                if "verify_ssl" not in config:
-                    config["verify_ssl"] = True
-                if "cache_enabled" not in config:
-                    config["cache_enabled"] = True
-                if "cache_ttl" not in config:
-                    config["cache_ttl"] = 300
-                return config
-
-    raise FileNotFoundError(
-        "No Odoo configuration found. Please create a config.json file or set environment variables."
-    )
-
-
-def get_odoo_client() -> OdooClient:
-    """
-    Get a configured Odoo client instance
-
+    Get a configured Odoo client instance from the instance manager
+    
+    Args:
+        instance_name: Name of the Odoo instance to connect to
+        
     Returns:
         OdooClient: A configured Odoo client instance
     """
-    config = load_config()
+    from .core.instance_manager import InstanceManager
+    
+    # Get the instance manager
+    instance_manager = InstanceManager()
+    
+    # Get the client for this instance
+    return instance_manager.get_client(instance_name)
 
-    logger.info("Initializing Odoo client with configuration")
 
-    return OdooClient(
-        url=config["url"],
-        db=config["db"],
-        username=config["username"],
-        password=config["password"],
-        timeout=config["timeout"],
-        verify_ssl=config["verify_ssl"],
-        cache_enabled=config["cache_enabled"],
-        cache_ttl=config["cache_ttl"],
-    )
+def list_available_instances() -> List[str]:
+    """
+    List all available Odoo instances
+    
+    Returns:
+        List of instance names
+    """
+    from .core.instance_manager import InstanceManager
+    
+    # Get the instance manager
+    instance_manager = InstanceManager()
+    
+    # Refresh and return available instances
+    instance_manager.refresh_instances()
+    return instance_manager.get_available_instances()
