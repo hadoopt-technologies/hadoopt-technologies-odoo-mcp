@@ -76,6 +76,32 @@ Odoo MCP is a bridge between Claude AI and Odoo ERP systems, allowing for intell
 
 Odoo MCP is designed to work as an MCP within Claude AI. No separate installation is required as Claude can access and utilize the functionality directly.
 
+### Required Python Packages
+
+```
+# Install dependencies
+pip install -r requirements.txt
+```
+
+**requirements.txt**
+```
+fastmcp>=1.0.0
+requests>=2.28.1
+xmlrpc>=0.9.0
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+pytz>=2023.3
+uvicorn>=0.22.0
+numpy>=1.24.3
+matplotlib>=3.7.1
+pandas>=2.0.1
+openpyxl>=3.1.2
+python-dateutil>=2.8.2
+Pillow>=9.4.0
+statsmodels>=0.14.0
+psutil>=5.9.5
+```
+
 ## Configuration
 
 The MCP can be configured through various methods:
